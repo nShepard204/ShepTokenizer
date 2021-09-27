@@ -4,76 +4,40 @@ import java.io.File;
 import java.io.FileReader;
 // Utility Imports.
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 class ShepTokenizer {
     // Variable Initialization & Declarations.
-    private StreamTokenizer tknStream = null;
-    private static final int QUOTE_CHARACTER = '\'';
-    private static final int DOUBLE_QUOTE_CHARACTER = '"';
-    private static final Map<Integer, String> reservedWords = createKeywordsMap();
-
-    // Initialize Reserved Keywords Map
-
-
+    private StreamTokenizer tokens;
+    private ShepToken currentTkn;
+    private static final Map<String, Integer> symbols = populateSymbols();
+    private boolean hasTokens = true;
+    private static final boolean debugMode = true;
+    private final Pattern enforceId = Pattern.compile("[A-Z_]+[0-9]+$|[A-Z]+");
+    
+    // Constructor.
     public ShepTokenizer(String fileName) {
         try {
-            StreamTokenizer tokenStream = new StreamTokenizer(new FileReader(new File(fileName)));
-            this.tknStream = tokenStream;
-            skipToken();
+            this.tokens = new StreamTokenizer(new FileReader(new File(fileName)));
         } catch (Exception e) {
             //TODO: handle exception
             System.err.println("An error occured trying to read the file: " + e.getMessage());
+            System.exit(0);
         }
+        // Add the additional words to the StreamTokenizer.
+        populateTokenizer();
+        skipToken();
     }
 
-    public void getToken()
-    {
-        if(tknStream != null)
-        {
-            try {
-                if(tknStream.ttype == StreamTokenizer.TT_NUMBER)
-                {
-                    System.out.println("Number: " + intVal());
-                }
-                else if(tknStream.ttype == StreamTokenizer.TT_WORD || tknStream.ttype == QUOTE_CHARACTER || tknStream.ttype == DOUBLE_QUOTE_CHARACTER)
-                {
-                    System.out.println("Word: " + reservedWords.get(tknStream.nval));
-                }
-                else {
-                    System.out.println("Current Token Value:" +  intVal());
-                    System.out.println("Current Token ID:" +  idName());
-                }
-            } catch (Exception e) {
-                System.err.println("An error occured at getToken(): " + e.getMessage());
-            }
-        }
-    }
-    public void skipToken()
-    {
-        if(tknStream != null)
-        {
-            try {
-                tknStream.nextToken();
-            } catch (Exception e) {
-                System.err.println("An error occured at skipToken(): " + e.getMessage());
-            }
-        }
+    // Accessor for hasTokens.
+    public boolean hasTokens(){
+        return hasTokens;
     }
 
-    private int intVal(){
-        int retVal = 0;
-        retVal = (int)tknStream.nval;
-        return retVal;
-    }
-
-    private String idName(){
-        String name = "";
-        name = tknStream.sval;
-        return name;
-    }
-
-    private static Map<Integer, String> createKeywordsMap(){
-        Map<Integer, String> keywords = new HashMap<Integer, String>();
+    // Initializes the reserved keywords map.
+    private static Map<String, Integer> populateSymbols(){
+        Map<String, Integer> keywords = new HashMap<String, Integer>();
         Scanner keywordFile = null;
         try {
             keywordFile = new Scanner(new File("reservedKeywords.txt"));
@@ -82,16 +46,16 @@ class ShepTokenizer {
             System.err.println("An error occured trying to read the file: " + e.getMessage());
         }
 
+        // Add common symbols and keywords into the Map.
         if(keywordFile != null){
             int id = 1;
             while(keywordFile.hasNextLine()){
-                keywords.put(id, keywordFile.nextLine());
+                keywords.put(keywordFile.nextLine(), id);
                 id++;
             }
         }
-
         /*
-        for(Map.Entry<Integer, String> i : keywords.entrySet())
+        for(Map.Entry<String, Integer> i : keywords.entrySet())
         {
             System.out.println("Token: " + i.getKey() + " - Symbol: " + i.getValue());
         }
@@ -100,11 +64,132 @@ class ShepTokenizer {
         return keywords;
     }
 
+    // Sets the special tokens for the under the hood tokenizer.
+    private void populateTokenizer(){
+        for(Map.Entry<String, Integer> entry : symbols.entrySet()){
+            if(tokens != null && entry.getKey().length() == 1 &&  entry.getValue() > 11 && entry.getValue() < 31){
+                char newTkn = entry.getKey().charAt(0);
+                tokens.ordinaryChar(newTkn);
+            }
+        }
+    }
+
+    // Returns the current token the tokenizer is looking at.
+    public ShepToken getToken(){
+        // Variable Initializations & Declarations.
+        ShepToken tkn = new ShepToken();
+        String charTkn = Character.toString((char)tokens.ttype);
+        int intVal = 31, idVal = 32, eofVal = 33;
+
+        // Process Word Tokens.
+        if(tokens.ttype == StreamTokenizer.TT_WORD){
+            tkn.setToken(tokens.sval);
+            if(symbols.containsKey(tokens.sval)){
+                tkn.setTokenVal(symbols.get(tokens.sval));
+            }
+            // Process Identifier Tokens.
+            else{
+                tkn.setTokenVal(idVal);
+                tkn.setIdName(tokens.sval);
+            }
+        }
+        // Process Number Tokens.
+        else if(tokens.ttype == StreamTokenizer.TT_NUMBER){
+            tkn.setToken("Integer");
+            tkn.setTokenVal(intVal);
+            tkn.setIntVal((int)tokens.nval);
+        }
+        // Process EOF Token.
+        else if(tokens.ttype == StreamTokenizer.TT_EOF){
+            tkn.setToken("EOF");
+            tkn.setTokenVal(eofVal);
+            hasTokens = false;
+        }
+        // Process Special Tokens.
+        else if(symbols.containsKey(charTkn)){
+            tkn.setToken(charTkn);
+            tkn.setTokenVal(symbols.get(charTkn));
+        }
+        this.currentTkn = tkn;
+        return tkn;
+    }
+
+    // Skips the current token and moves onto the next token.
+    public void skipToken(){
+        try {
+            tokens.nextToken();
+        } catch (Exception e) {
+            System.err.println("An error occured at skipToken(): " + e.getMessage());
+        }
+    }
+
+    // Returns the value of the current integer token.
+    public int intVal(){
+        int retVal = 0;
+        if(currentTkn.getIntVal() != null){
+            retVal = currentTkn.getIntVal();
+        }
+        else {
+            if(debugMode){
+                retVal = -1;
+            } 
+            else{
+                System.err.println("Error! Tried to get integer value of a non-integer token.");
+                System.exit(0);
+            }
+        }
+        return retVal;
+    }
+
+    // Returns the name of the idenifier the tokenizer's currently at.
+    public String idName(){
+        String name = null;
+        if(currentTkn.getIdName() != null){
+            Matcher idTest = enforceId.matcher(currentTkn.getIdName());
+            if(idTest.matches()){
+                name = currentTkn.getIdName();
+            }
+            else{
+                if(debugMode){
+                    name = "Not a valid ID!";
+                } 
+                else{
+                    System.err.println("Error! Not a valid ID.");
+                    System.exit(0);
+                }
+            }
+        }
+        else {
+            if(debugMode){
+                name = "not an id";
+            } 
+            else{
+                System.err.println("Error! Tried to get ID of a non-ID token.");
+                System.exit(0);
+            }
+        }
+        return name;
+    }
+
     public static void main(String[] args) {
         // Variable Initializations & Declarations.
         
         // Read file contents from cmd line.
-        ShepTokenizer shepTokenizer = new ShepTokenizer(args[0]);
-        shepTokenizer.getToken();
+        ShepTokenizer tokenizer = new ShepTokenizer(args[0]);
+
+        System.out.print("Tokens: ");
+        while(tokenizer.hasTokens()){
+            ShepToken token = tokenizer.getToken();
+            /* Info-Rich Output.
+            System.out.println("Token Name: " + token.getToken());
+            System.out.println("Token Value: " + token.getTokenVal());
+            System.out.println("Current Token IntVal: " + tokenizer.intVal());
+            System.out.println("Current Token ID Name: " + tokenizer.idName() + "\n");
+            */
+
+            // The output the assignment wants.
+            System.out.print(token.getTokenVal() + " ");
+            tokenizer.skipToken();
+        }
     }
 }
