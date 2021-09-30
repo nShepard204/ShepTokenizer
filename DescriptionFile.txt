@@ -1,10 +1,13 @@
 I designed ShepTokenizer with the future projects in mind and what they would need from my Tokenizer, hence the inclusion of the ShepToken class. 
 ShepToken is designed to store all the information a user could want about a given token, in the context of this course/project anyways.
 
-How to use ShepTokenizer: Copy from README lol
+How to use ShepTokenizer: See README
 
 How I tested ShepTokenizer: I basically scowered the class Piazza and took pretty much all the cases other students have posted, ran them through ShepTokenizer, and
 compared the output. Test files can be found in the src/tests folder.
 
 A List of Any Remaining Bugs: None that I can think of, however if you (the grader) run into any bugs or have any questions as to the implementation of my Tokenizer.
 Please email me at shepard.204@osu.edu, obviously I am more than happy to help!
+
+Note: Some variables of the ShepTokenizer class are marked as private but are still publically accessible for some reason that I didn't have
+time to figure out. Shouldn't change anything but just a heads up!

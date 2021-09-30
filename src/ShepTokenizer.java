@@ -7,7 +7,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-class ShepTokenizer {
+public class ShepTokenizer {
     // Variable Initialization & Declarations.
     private StreamTokenizer tokens;
     private ShepToken currentTkn;
@@ -22,7 +22,6 @@ class ShepTokenizer {
         try {
             this.tokens = new StreamTokenizer(new FileReader(new File(fileName)));
         } catch (Exception e) {
-            //TODO: handle exception
             System.err.println("An error occured trying to read the file: " + e.getMessage());
             System.exit(0);
         }
@@ -43,8 +42,8 @@ class ShepTokenizer {
         try {
             keywordFile = new Scanner(new File("reservedKeywords.txt"));
         } catch (Exception e) {
-            //TODO: handle exception
             System.err.println("An error occured trying to read the file: " + e.getMessage());
+            System.exit(1);
         }
 
         // Add common symbols and keywords into the Map.
@@ -55,13 +54,6 @@ class ShepTokenizer {
                 id++;
             }
         }
-        /*
-        for(Map.Entry<String, Integer> i : keywords.entrySet())
-        {
-            System.out.println("Token: " + i.getKey() + " - Symbol: " + i.getValue());
-        }
-        */
-
         return keywords;
     }
 
@@ -153,7 +145,7 @@ class ShepTokenizer {
     }
 
     // Returns the value of the current integer token.
-    public int intVal(){
+    private int intVal(){
         int retVal = 0;
         if(currentTkn.getIntVal() != null){
             retVal = currentTkn.getIntVal();
@@ -171,7 +163,7 @@ class ShepTokenizer {
     }
 
     // Returns the name of the idenifier the tokenizer's currently at.
-    public String idName(){
+    private String idName(){
         String name = null;
         if(currentTkn.getIdName() != null){
             Matcher idTest = enforceId.matcher(currentTkn.getIdName());
@@ -201,22 +193,13 @@ class ShepTokenizer {
     }
 
     public static void main(String[] args) {
-        // Variable Initializations & Declarations.
-        
         // Read file contents from cmd line.
         ShepTokenizer tokenizer = new ShepTokenizer(args[0]);
 
+        // Start printing out tokens.
         System.out.println("Tokens: ");
         while(tokenizer.hasTokens()){
             int token = tokenizer.getToken();
-            /* Info-Rich Output.
-            System.out.println("Token Name: " + token.getToken());
-            System.out.println("Token Value: " + token.getTokenVal());
-            System.out.println("Current Token IntVal: " + tokenizer.intVal());
-            System.out.println("Current Token ID Name: " + tokenizer.idName() + "\n");
-            */
-
-            // The output the assignment wants.
             System.out.println(token);
             tokenizer.skipToken();
         }
