@@ -206,7 +206,7 @@ class ShepTokenizer {
         // Read file contents from cmd line.
         ShepTokenizer tokenizer = new ShepTokenizer(args[0]);
 
-        System.out.print("Tokens: ");
+        System.out.println("Tokens: ");
         while(tokenizer.hasTokens()){
             int token = tokenizer.getToken();
             /* Info-Rich Output.
@@ -217,7 +217,7 @@ class ShepTokenizer {
             */
 
             // The output the assignment wants.
-            System.out.println(token + " ");
+            System.out.println(token);
             tokenizer.skipToken();
         }
     }
