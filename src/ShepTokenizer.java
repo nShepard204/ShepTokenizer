@@ -13,8 +13,9 @@ class ShepTokenizer {
     private ShepToken currentTkn;
     private static final Map<String, Integer> symbols = populateSymbols();
     private boolean hasTokens = true;
-    private static final boolean debugMode = true;
+    private static final boolean debugMode = false;
     private final Pattern enforceId = Pattern.compile("[A-Z_]+[0-9]+$|[A-Z]+");
+    private char prevTkn = '\0';
     
     // Constructor.
     public ShepTokenizer(String fileName) {
@@ -67,7 +68,7 @@ class ShepTokenizer {
     // Sets the special tokens for the under the hood tokenizer.
     private void populateTokenizer(){
         for(Map.Entry<String, Integer> entry : symbols.entrySet()){
-            if(tokens != null && entry.getKey().length() == 1 &&  entry.getValue() > 11 && entry.getValue() < 31){
+            if(this.tokens != null && entry.getKey().length() == 1 &&  entry.getValue() > 11 && entry.getValue() < 31){
                 char newTkn = entry.getKey().charAt(0);
                 tokens.ordinaryChar(newTkn);
             }
@@ -75,43 +76,71 @@ class ShepTokenizer {
     }
 
     // Returns the current token the tokenizer is looking at.
-    public ShepToken getToken(){
+    public int getToken(){
         // Variable Initializations & Declarations.
         ShepToken tkn = new ShepToken();
-        String charTkn = Character.toString((char)tokens.ttype);
-        int intVal = 31, idVal = 32, eofVal = 33;
+        int intVal = 31, idVal = 32, eofVal = 33, retVal = 0;
 
         // Process Word Tokens.
         if(tokens.ttype == StreamTokenizer.TT_WORD){
-            tkn.setToken(tokens.sval);
+            Matcher idTest = enforceId.matcher(tokens.sval);
             if(symbols.containsKey(tokens.sval)){
                 tkn.setTokenVal(symbols.get(tokens.sval));
+                retVal = symbols.get(tokens.sval);
             }
             // Process Identifier Tokens.
-            else{
+            else if(idTest.matches()){
                 tkn.setTokenVal(idVal);
                 tkn.setIdName(tokens.sval);
+                retVal = idVal;
             }
+            // Illegal Token Handler.
+            else {
+                System.err.println("Error! Illegal Token on Line " + tokens.lineno());
+                System.exit(0);
+            }
+            tkn.setToken(tokens.sval);
         }
         // Process Number Tokens.
         else if(tokens.ttype == StreamTokenizer.TT_NUMBER){
             tkn.setToken("Integer");
             tkn.setTokenVal(intVal);
             tkn.setIntVal((int)tokens.nval);
+            retVal = intVal;
         }
         // Process EOF Token.
         else if(tokens.ttype == StreamTokenizer.TT_EOF){
             tkn.setToken("EOF");
             tkn.setTokenVal(eofVal);
             hasTokens = false;
+            retVal = eofVal;
         }
         // Process Special Tokens.
-        else if(symbols.containsKey(charTkn)){
-            tkn.setToken(charTkn);
-            tkn.setTokenVal(symbols.get(charTkn));
+        else {
+            // Get the token we're looking at and store it somewhere.
+            this.prevTkn = (char)tokens.ttype;
+            String prevTknStr = Character.toString(this.prevTkn);
+            // Move onto the next token.
+            this.skipToken();
+            char nextTkn = (char)tokens.ttype;
+            String nextTknStr = Character.toString(nextTkn);
+            // If the two combined tokens creates one of our double char, return its value
+            String doubleCharToken = prevTknStr + nextTknStr;
+            if(symbols.containsKey(doubleCharToken)){
+                retVal = symbols.get(doubleCharToken);
+            }
+            // If not, call pushBack and return prevTkn.
+            else if(symbols.containsKey(prevTknStr)){
+                tokens.pushBack();
+                retVal = symbols.get(prevTknStr);
+            }
+            else {
+                this.skipToken();
+                retVal = this.getToken();
+            }
         }
         this.currentTkn = tkn;
-        return tkn;
+        return retVal;
     }
 
     // Skips the current token and moves onto the next token.
@@ -179,7 +208,7 @@ class ShepTokenizer {
 
         System.out.print("Tokens: ");
         while(tokenizer.hasTokens()){
-            ShepToken token = tokenizer.getToken();
+            int token = tokenizer.getToken();
             /* Info-Rich Output.
             System.out.println("Token Name: " + token.getToken());
             System.out.println("Token Value: " + token.getTokenVal());
@@ -188,7 +217,7 @@ class ShepTokenizer {
             */
 
             // The output the assignment wants.
-            System.out.print(token.getTokenVal() + " ");
+            System.out.println(token + " ");
             tokenizer.skipToken();
         }
     }
