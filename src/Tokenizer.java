@@ -7,7 +7,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ShepTokenizer {
+public class Tokenizer {
     // Variable Initialization & Declarations.
     private StreamTokenizer tokens;
     private ShepToken currentTkn;
@@ -18,7 +18,7 @@ public class ShepTokenizer {
     private char prevTkn = '\0';
     
     // Constructor.
-    public ShepTokenizer(String fileName) {
+    public Tokenizer(String fileName) {
         try {
             this.tokens = new StreamTokenizer(new FileReader(new File(fileName)));
         } catch (Exception e) {
@@ -192,9 +192,10 @@ public class ShepTokenizer {
         return name;
     }
 
+    /*
     public static void main(String[] args) {
         // Read file contents from cmd line.
-        ShepTokenizer tokenizer = new ShepTokenizer(args[0]);
+        Tokenizer tokenizer = new Tokenizer(args[0]);
 
         // Start printing out tokens.
         System.out.println("Tokens: ");
@@ -204,4 +205,5 @@ public class ShepTokenizer {
             tokenizer.skipToken();
         }
     }
+    */
 }
